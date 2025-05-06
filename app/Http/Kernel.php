@@ -67,7 +67,8 @@ class Kernel extends HttpKernel
         'EmailTwoStepVerification' => \App\Http\Middleware\checkTwoStepVerification::class,  // add on for email two step verification
         'Mgs91access' => \App\Http\Middleware\Mgs91access::class,  // Msg91 Access
         'RozarPayAddOn' => \App\Http\Middleware\RozarPayAddOn::class,  //  RozarPayAddOn Access
-        'checkAdmin' => \App\Http\Middleware\checkAdmin::class,  //  RozarPayAddOn Access
+        'checkAdmin' => \App\Http\Middleware\checkAdmin::class,  //  Only admin access
+        'checkUser' => \App\Http\Middleware\checkUser::class,  //  Only user access
 
     ];
 }

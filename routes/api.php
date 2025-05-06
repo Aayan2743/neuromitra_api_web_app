@@ -11,6 +11,9 @@ use App\Http\Controllers\Mgs91Controller;
 use App\Http\Controllers\RozarpayController;
 use App\Http\Controllers\staffController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\assesementsController;
+use App\Http\Controllers\Mobile\DashboardApi;
+use App\Http\Controllers\Mobile\servicesController;
 
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
@@ -48,20 +51,25 @@ Route::group(['middleware'=>'api'],function($routes){
 Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
 
     // Staff CURD
-
      Route::post('/add-staff',[staffController::class,'store']);
      Route::get('/view-staff/{id?}',[staffController::class,'viewStaff']);
      Route::put('/update-staff/{id?}', [staffController::class, 'update']);
      Route::delete('/deleted-staff/{id?}', [staffController::class, 'deleted']);
 
+    // assesement Question for Kids
+    Route::post('/add-questions',[assesementsController::class,'store']);
+    Route::get('/view-questions/{id?}',[assesementsController::class,'viewQuestions']);
+    Route::put('/update-questions/{id?}', [assesementsController::class, 'update']);
+    Route::delete('/deleted-questions/{id?}', [assesementsController::class, 'deleted']);
 
+    // assesement answers
+    Route::get('/view-assesement-submission/{id?}',[assesementsController::class,'assesementsubmission']);
 
-
-
-
-
-
-
+    //services i.e therapy councelling all curd
+    Route::post('add-service',[servicesController::class,'store']);
+    Route::get('view-service/{id?}',[servicesController::class,'viewService']);
+    Route::delete('delete-service/{id?}',[servicesController::class,'deleteservice']);
+    Route::post('/update-service/{id?}', [servicesController::class, 'update']);
 
 
     // Manager Flow
@@ -88,6 +96,23 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
 
 });
 
+Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],function($routes){
+
+    //Dashboard Api
+    Route::get('quatations',[DashboardApi::class,'randomQuote']);
+    Route::post('daily-feedback',[DashboardApi::class,'feedbackHealth']);
+
+
+
+
+
+});
+
+
+
+
+
+
     // rozarpay Flow
-    Route::post('/createOrder',[RozarpayController::class,'createOrder'])->middleware('RozarPayAddOn');
-    Route::post('/verifyPayment',[RozarpayController::class,'verifyPayment'])->middleware('RozarPayAddOn');
+    // Route::post('/createOrder',[RozarpayController::class,'createOrder'])->middleware('RozarPayAddOn');
+    // Route::post('/verifyPayment',[RozarpayController::class,'verifyPayment'])->middleware('RozarPayAddOn');

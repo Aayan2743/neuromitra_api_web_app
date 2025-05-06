@@ -400,20 +400,17 @@ class CustomApiAuthController extends Controller
 
                       
               
-                // $deviceToken =  $adminFcmTokens;
+             
                 $title = 'Registration';
                 $body = 'New User Registered';
                 $responses = [];
 
                 foreach ($adminFcmTokens as $deviceToken) {
                     $response = $this->firebase->sendNotification($deviceToken, $title, $body);
-                    $responses[] = $response; // Store the response for each notification
+                    $responses[] = $response; 
                 }
 
-                // $response = $this->firebase->sendNotification($adminFcmTokens[0], $title, $body);
-        
-                // return response()->json(['message' => $response]);
-         
+            
         
 
             return response()->json([
