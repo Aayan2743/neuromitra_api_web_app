@@ -14,12 +14,15 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\assesementsController;
 use App\Http\Controllers\Mobile\DashboardApi;
 use App\Http\Controllers\Mobile\servicesController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\AppointmentController;
 
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
 
 
 Route::group(['middleware'=>'api'],function($routes){
+
 
     //Mobile Api
     Route::post('/mobile-login',[CustomApiAuthController::class,'mobile_login']);
@@ -41,6 +44,9 @@ Route::group(['middleware'=>'api'],function($routes){
     Route::post('/verify_otp',[CustomApiAuthController::class,'verify_otp_update_password']);
 
 
+    // Guest login
+    Route::get('/users/guest-service/{id?}',[servicesController::class,'viewService']);
+    Route::get('/users/guest-quatations',[DashboardApi::class,'randomQuote']);
 
  
 
@@ -70,6 +76,11 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
     Route::get('view-service/{id?}',[servicesController::class,'viewService']);
     Route::delete('delete-service/{id?}',[servicesController::class,'deleteservice']);
     Route::post('/update-service/{id?}', [servicesController::class, 'update']);
+
+
+    // profile details
+    Route::get('view-profile_details',[ProfileController::class,'viewProfiles']);
+    Route::post('profile-update_details',[ProfileController::class,'update']);
 
 
     // Manager Flow
@@ -103,8 +114,15 @@ Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],f
     Route::post('daily-feedback',[DashboardApi::class,'feedbackHealth']);
 
 
+    //view services i.e therapy or councelling
+    Route::get('view-service/{id?}',[servicesController::class,'viewService']);
 
+    // Profile Gets
+    Route::get('view-profile',[ProfileController::class,'viewProfiles']);
+    Route::post('profile-update',[ProfileController::class,'update']);
 
+    // appouintments
+    Route::post('create-appointment',[AppointmentController::class,'store']);
 
 });
 

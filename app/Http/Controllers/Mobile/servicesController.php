@@ -22,8 +22,10 @@ class servicesController extends Controller
             'key_area_focus'=>'required|string',
             'benefits'=>'required|string',
             'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'app_type' => 'required|in:Online,Offline',
         ],[
-            'type.in'=>'type should be Therapy Or Counselling'
+            'type.in'=>'type should be Therapy Or Counselling',
+            'app_type.in'=>'Appointment type should be Online Or Offline'
         ]);
 
         if($validator->fails()){
@@ -57,6 +59,7 @@ class servicesController extends Controller
             'key_area_focus'=>$request->key_area_focus,
             'benefits'=>$request->benefits,
             'image'=>$imageUrl,
+            'app_type'=>$request->app_type,
         ]);
 
         if($create_service){
@@ -194,8 +197,10 @@ class servicesController extends Controller
         'key_area_focus'=>'required|string',
         'benefits'=>'required|string',
         'image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        'app_type' => 'required|in:Online,Offline',
         ],[
-            'type.in'=>'type should be Therapy Or Counselling'
+            'type.in'=>'type should be Therapy Or Counselling',
+            'app_type.in'=>'Appointment Type should be Online Or Online'
         ]);
 
         if($validator->fails()){
@@ -205,7 +210,7 @@ class servicesController extends Controller
             ]);
         }
 
-        $data = $request->only(['type', 'name', 'amount', 'description', 'key_area_focus', 'benefits']);
+        $data = $request->only(['type', 'name', 'amount', 'description', 'key_area_focus', 'benefits','app_type']);
 
         if ($request->hasFile('image')) {
             // Delete old image if exists
