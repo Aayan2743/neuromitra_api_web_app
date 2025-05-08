@@ -16,6 +16,8 @@ use App\Http\Controllers\Mobile\DashboardApi;
 use App\Http\Controllers\Mobile\servicesController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\PhonePaycontroller;
+use App\Http\Controllers\ChildController;
 
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
@@ -52,8 +54,6 @@ Route::group(['middleware'=>'api'],function($routes){
 
 });
 
-
-
 Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
 
     // Staff CURD
@@ -82,26 +82,12 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
     Route::get('view-profile_details',[ProfileController::class,'viewProfiles']);
     Route::post('profile-update_details',[ProfileController::class,'update']);
 
+ 
+    // view appointments
+    Route::get('view-appointments/{id?}',[AppointmentController::class,'index']);
+    Route::put('assigned-staff/{id}',[AppointmentController::class,'assign_to_staff']);
 
-    // Manager Flow
-
-    // Route::post('/add-manager',[ManagerController::class,'store']);
-    // Route::get('/view-manager/{id?}',[ManagerController::class,'viewmanager']); // use this for to fetch the manager details
-    // Route::post('/update-manager/{id}',[ManagerController::class,'updatemanager']);
-    // Route::get('/delete-manager/{id}',[ManagerController::class,'deletemanager']);
-
-    // //building Flow
-    // Route::post('/add-building',[buildingController::class,'store']);
-    // Route::post('/logout',[CustomApiAuthController::class,'logout']);
-
-
-    // // 2 step factor verify email or update R & D later 
-    // Route::post('/send_verification_code',[TwoStepVerification::class,'send_verification_code'])->middleware('EmailTwoStepVerification');
-    // Route::post('/verify_email',[TwoStepVerification::class,'verifyEmail'])->middleware('EmailTwoStepVerification');
-
-    // // Message OTP Flow
-    // Route::post('/Send-Otp',[Mgs91Controller::class,'SendOtp'])->middleware('Mgs91access');
-    // Route::post('/Verify-Otp',[Mgs91Controller::class,'VerifyOtp'])->middleware('Mgs91access');
+    
 
 
 
@@ -121,11 +107,25 @@ Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],f
     Route::get('view-profile',[ProfileController::class,'viewProfiles']);
     Route::post('profile-update',[ProfileController::class,'update']);
 
-    // appouintments
-    Route::post('create-appointment',[AppointmentController::class,'store']);
+
+
+       // create Appointment
+       Route::post('create-appointment-request',[AppointmentController::class,'store']);
+       
+
+       // get_child_details
+       Route::get('get-child-details/{id?}',[ChildController::class,'index']);
+       Route::post('add-new-child',[ChildController::class,'store']);
+       Route::put('edit-child/{id}',[ChildController::class,'update']);
+       Route::delete('delete-child/{id}',[ChildController::class,'delete']);
 
 });
 
+// test on phonepay
+
+// Route::post('/create_phonepay',[PhonePaycontroller::class,'phonePePayment']);
+// Route::post('/create_phonepay',[PhonePaycontroller::class,'phonePePayment']);
+// Route::any('/redirct-url', [PhonePaycontroller::class, 'callBackAction']);
 
 
 

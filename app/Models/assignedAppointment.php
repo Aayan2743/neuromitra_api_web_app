@@ -5,16 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class appiontment extends Model
+class assignedAppointment extends Model
 {
     use HasFactory;
 
-    public $table="appiontments";
+    public $table="assigned";
 
     public $timestamps=false;
-    public $guarded=[];
 
-    protected $casts = [
-        'calender_days' => 'array',
-    ];
+    public $guarded=[];
 }

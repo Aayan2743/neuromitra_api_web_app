@@ -346,6 +346,61 @@
             "install-path": "../dflydev/dot-access-data"
         },
         {
+            "name": "dipesh79/laravel-phonepe",
+            "version": "1.0.1",
+            "version_normalized": "1.0.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Dipesh79/LaravelPhonePe.git",
+                "reference": "286f3b26f1ab86f68543e1d40776b1f97cb14ca2"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Dipesh79/LaravelPhonePe/zipball/286f3b26f1ab86f68543e1d40776b1f97cb14ca2",
+                "reference": "286f3b26f1ab86f68543e1d40776b1f97cb14ca2",
+                "shasum": ""
+            },
+            "time": "2024-05-04T04:22:30+00:00",
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Dipesh79\\LaravelPhonePe\\LaravelPhonePeServiceProvider"
+                    ]
+                }
+            },
+            "installation-source": "dist",
+            "autoload": {
+                "psr-4": {
+                    "Dipesh79\\LaravelPhonePe\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Dipesh79",
+                    "email": "dipeshkhanal79@gmail.com",
+                    "homepage": "https://www.khanaldipesh.com.np",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Laravel PhonePe - Laravel PhonePe Payment Integration Library",
+            "support": {
+                "issues": "https://github.com/Dipesh79/LaravelPhonePe/issues",
+                "source": "https://github.com/Dipesh79/LaravelPhonePe/tree/1.0.1"
+            },
+            "funding": [
+                {
+                    "url": "https://www.patreon.com/dipeshkhanal",
+                    "type": "patreon"
+                }
+            ],
+            "install-path": "../dipesh79/laravel-phonepe"
+        },
+        {
             "name": "doctrine/inflector",
             "version": "2.0.10",
             "version_normalized": "2.0.10.0",

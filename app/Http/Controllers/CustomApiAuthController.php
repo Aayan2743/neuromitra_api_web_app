@@ -401,14 +401,14 @@ class CustomApiAuthController extends Controller
                       
               
              
-                $title = 'Registration';
-                $body = 'New User Registered';
-                $responses = [];
+                // $title = 'Registration';
+                // $body = 'New User Registered';
+                // $responses = [];
 
-                foreach ($adminFcmTokens as $deviceToken) {
-                    $response = $this->firebase->sendNotification($deviceToken, $title, $body);
-                    $responses[] = $response; 
-                }
+                // foreach ($adminFcmTokens as $deviceToken) {
+                //     $response = $this->firebase->sendNotification($deviceToken, $title, $body);
+                //     $responses[] = $response; 
+                // }
 
             
         
@@ -420,7 +420,7 @@ class CustomApiAuthController extends Controller
                 'token_type' => 'bearer',
                 'role'=>$role,
                 'expires_in' => auth()->factory()->getTTL() * 60,
-                'Fcm_Notification_response' => $response 
+                // 'Fcm_Notification_response' => $response 
             ]);
 
 
