@@ -22,6 +22,10 @@ use App\Http\Controllers\ChildController;
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
 
+Route::get('staff_engagged/{id}',[AppointmentController::class,'staff_engagged']);
+Route::get('staff_free/{id}',[AppointmentController::class,'free_days']);
+
+
 
 Route::group(['middleware'=>'api'],function($routes){
 
@@ -85,8 +89,12 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
  
     // view appointments
     Route::get('view-appointments/{id?}',[AppointmentController::class,'index']);
-    Route::put('assigned-staff/{id}',[AppointmentController::class,'assign_to_staff']);
+    // Route::put('assigned-staff/{id}',[AppointmentController::class,'assign_to_staff']);
+    Route::post('assigned-staff',[AppointmentController::class,'assign_to_staff']);
 
+
+    // staff availability
+ 
     
 
 

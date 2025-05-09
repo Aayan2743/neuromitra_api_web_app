@@ -48,6 +48,7 @@ class ChildController extends Controller
             $validator=validator::make($request->all(),[
                 'name'=>'required',
                 'age'=>'required|numeric',
+                'gender'=>'required|in:Male,Female',
                
             ]);
             if($validator->fails()){
@@ -61,6 +62,7 @@ class ChildController extends Controller
                 $create_child=child::create([
                     'name'=>$request->name,
                     'age'=>$request->age,
+                    'gender'=>$request->gender,
                     'parent_id'=>auth()->user()->id,
                     'is_parent'=>false
                 ]);
@@ -114,6 +116,8 @@ class ChildController extends Controller
             $validate = Validator::make($request->all(), [
                 'name' => 'required',
                 'age' => 'required|numeric',
+                'gender' => 'required|in:Male,Female',
+                
             ]);
 
             if ($validate->fails()) {
@@ -126,6 +130,7 @@ class ChildController extends Controller
             $child->update([
                 'name' => $request->name,
                 'age' => $request->age,
+                'gender' => $request->gender,
             ]);
 
             return response()->json([
@@ -142,7 +147,7 @@ class ChildController extends Controller
 
      //delete child
      public function delete($id = null)
-     {
+     {   
  
         $child = child::where('id', $id)
         ->where('parent_id', auth()->user()->id)

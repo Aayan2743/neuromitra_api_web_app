@@ -22,7 +22,7 @@ class checkAdmin
             return response()->json(
                 [
                     'status'=>false,
-                    'message'=> 'You Dont have access to create the staff',
+                    'message'=> 'You Dont have Admin access',
                 ],
                200);
         }

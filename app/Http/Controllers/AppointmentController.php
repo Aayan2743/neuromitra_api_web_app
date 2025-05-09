@@ -8,7 +8,10 @@ use App\Models\appiontment;
 use App\Models\child;
 use App\Models\service;
 use App\Models\assignedAppointment;
+use Illuminate\Validation\ValidationException;
 use carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Carbon\CarbonPeriod;
 
 class AppointmentController extends Controller
 {
@@ -29,6 +32,7 @@ class AppointmentController extends Controller
                     if ($req->appointment_for === 'self') {
                         $rules += [
                             'age' => 'required|numeric',
+                            'gender' => 'required|in:Male,Female',
                             'appointment_mode' => 'required|in:online,offline',
                             'appointment_request_date' => 'required|date|after_or_equal:today',
                             // 'service_name' => 'required',
@@ -72,6 +76,7 @@ class AppointmentController extends Controller
                             $check_patient->age = $req->age;
                             $check_patient->parent_id = $user_id;
                             $check_patient->is_parent = true;
+                            $check_patient->gender = $req->gender;
                             $check_patient->save();
                         }
 
@@ -82,6 +87,7 @@ class AppointmentController extends Controller
                             'phone' => $user->contact,
                             'appointment_for' => $req->appointment_for,
                             'age' => $req->age,
+                            'gender' => $req->gender,
                             'appointment_mode' => $req->appointment_mode,
                             'user_id' => $user_id,
                             'patient_id' => $check_patient->id,
@@ -232,7 +238,7 @@ class AppointmentController extends Controller
        }
 
        // assigned 
-       public function assign_to_staff(Request $request,$id){
+       public function assign_to_staff_workling_fine(Request $request,$id){
 
         if (!$id) {
             return response()->json([
@@ -271,11 +277,7 @@ class AppointmentController extends Controller
     
                
     
-                // $appointment->update([
-                //     'status' => 'assigned',
-                //     'staff_id'=>$request->staff_id
-                   
-                // ]);
+              
 
                 $calendarDays = json_decode($appointment->calender_days, true);
                 // dd($calendarDays);
@@ -298,9 +300,12 @@ class AppointmentController extends Controller
 
 
                 $starting_time = Carbon::createFromFormat('H:i', $request->starting_time);
-                $ending_time = $starting_time->copy()->addHours(1)->addMinutes(30)->format('H:i');
+                $ending_time = $starting_time->copy()->addMinutes(45)->format('H:i');
 
-                assignedAppointment::create([
+
+
+
+                $assigned_id=assignedAppointment::create([
                     'app_id' => $id,
                     'staff_id' => $request->staff_id,
                     'starting_date' => $selectedDates[0],
@@ -310,6 +315,14 @@ class AppointmentController extends Controller
                     'starting_time' => $request->starting_time,
                     'ending_time' => $ending_time,
                 ]);
+
+                
+                $appointment->update([
+                    'status' => 'assigned',
+                    'staff_id'=>$request->staff_id,
+                    'assigned_id'=>$assigned_id->id,
+                   
+                 ]);
 
 
 
@@ -336,9 +349,255 @@ class AppointmentController extends Controller
 
        }
 
+       // new validaton
+
+       public function assign_to_staff(Request $request)
+       {
+       
+            // 1) Validate incoming payload, including appointment_id as variable
+        
+            $validator = Validator::make($request->all(), [
+                'appointment_id' => 'required|integer|exists:appiontments,id',
+                'staff_id'       => 'required|integer|exists:users,id',
+                'starting_date'  => 'required|date',
+                'starting_time'  => 'required|date_format:H:i',
+            ]);
+    
+            if ($validator->fails()) {
+                throw new ValidationException($validator);
+            }
+    
+            // 2) Load the appointment (must be open)
+            $appointment = appiontment::where('id', $request->appointment_id)
+                                      ->where('status', 'open')
+                                      ->first();
+            if (! $appointment) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Appointment not found or not open',
+                ], 404);
+            }
+    
+            // 3) Parse requested start and compute end time (45m slot)
+            $newStartTime = Carbon::createFromFormat('H:i', $request->starting_time);
+            $newEndTime   = $newStartTime->copy()->addMinutes(45);
+    
+            // 4) Define the forbidden window (05:25–06:10)
+            $blockStart = Carbon::createFromTime(5, 25);
+            $blockEnd   = Carbon::createFromTime(6, 10);
+    
+            // 5) Reject if new block overlaps the forbidden window
+            if ($newStartTime->lt($blockEnd) && $newEndTime->gt($blockStart)) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'Assignments may not overlap the restricted window 05:25–06:10.',
+                ], 422);
+            }
+    
+            // 6) Compute the assignment’s dates (single-day here)
+            $startDate = $request->starting_date;
+            $endDate   = $startDate;
+    
+            // 7) Overlap check: no existing assignment on the same date may overlap in time
+            $conflict = AssignedAppointment::where('app_id',        $appointment->id)
+                ->where('staff_id',      $request->staff_id)
+                ->where('starting_date', $startDate)
+                ->where('ending_date',   $endDate)
+                ->whereTime('starting_time', '<', $newEndTime->format('H:i'))
+                ->whereTime('ending_time',   '>', $newStartTime->format('H:i'))
+                ->exists();
+    
+            if ($conflict) {
+                return response()->json([
+                    'status'  => false,
+                    'message' => 'This time slot overlaps an existing assignment.',
+                ], 422);
+            }
+    
+            // 8) Create the new assignment
+            $assigned = AssignedAppointment::create([
+                'app_id'         => $appointment->id,
+                'staff_id'       => $request->staff_id,
+                'starting_date'  => $startDate,
+                'ending_date'    => $endDate,
+                'starting_time'  => $newStartTime->format('H:i'),
+                'ending_time'    => $newEndTime->format('H:i'),
+                'days'           => $appointment->days,
+                'calender_days'  => $appointment->calender_days,
+            ]);
+    
+            // 9) Update the appointment’s status
+            $appointment->update([
+                'status'      => 'assigned',
+                'staff_id'    => $request->staff_id,
+                'assigned_id' => $assigned->id,
+            ]);
+    
+            return response()->json([
+                'status'  => true,
+                'message' => 'Appointment assigned successfully.',
+                'data'    => $assigned,
+            ], 201);
+        }
+       
+       
+       
+  
+
+
+
+
+    
+      
+
+ 
+
+
+       // free days
+       public function free_days($staffId, Request $request)
+       {
+       
+        $request->validate([
+            'from' => 'required|date',
+            'to'   => 'required|date|after_or_equal:from',
+        ]);
+
+        $from = Carbon::parse($request->query('from'));
+        $to   = Carbon::parse($request->query('to'));
+
+        // 2) Fetch any schedule rows overlapping [from…to]
+        $schedules = assignedAppointment::where('staff_id', $staffId)
+            ->whereDate('ending_date',   '>=', $from)
+            ->whereDate('starting_date', '<=', $to)
+            ->get();
+
+        $results = [];
+
+        // Business-day bounds as Carbon times
+        $businessStart = Carbon::createFromTime(6, 0);   // 6:00 AM
+        $businessEnd   = Carbon::createFromTime(20, 0);  // 8:00 PM
+
+        foreach ($schedules as $sched) {
+            // 3) Compute the overlap window for this schedule row
+            $startDate = $from->greaterThan($sched->starting_date)
+                         ? $from
+                         : $sched->starting_date;
+
+            $endDate   = $to->lessThan($sched->ending_date)
+                         ? $to
+                         : $sched->ending_date;
+
+            // 4) Iterate each day in that overlap
+            foreach (CarbonPeriod::create($startDate, $endDate) as $day) {
+                // Only consider days listed in calendar_days
+                if (! in_array(strtolower($day->format('D')), $sched->calender_days)) {
+                    continue;
+                }
+
+                // 5) Parse the booked (scheduled) times
+                $bookedStart = Carbon::createFromFormat('H:i', $sched->starting_time);
+                $bookedEnd   = Carbon::createFromFormat('H:i', $sched->ending_time);
+
+                $freeSlots = [];
+
+                // 6) Before booked slot (from businessStart → bookedStart)
+                if ($bookedStart->greaterThan($businessStart)) {
+                    $freeSlots[] = [
+                        'start' => $businessStart->format('g:i A'),
+                        'end'   => $bookedStart->format('g:i A'),
+                    ];
+                }
+
+                // 7) After booked slot (from bookedEnd → businessEnd)
+                if ($bookedEnd->lessThan($businessEnd)) {
+                    $freeSlots[] = [
+                        'start' => $bookedEnd->format('g:i A'),
+                        'end'   => $businessEnd->format('g:i A'),
+                    ];
+                }
+
+                $results[] = [
+                    'date'       => $day->toDateString(),
+                    'day'        => $day->format('l'),        // e.g. "Monday"
+                    'free_slots' => $freeSlots,
+                ];
+            }
+        }
+
+        return response()->json([
+            'staff_id' => (int)$staffId,
+            'results'  => $results,
+        ]);
+
+
+        
+        }
+
+        // yoonga days
+
+        public function staff_engagged($staffId, Request $request)
+        {
+            
+            $request->validate([
+                'from' => 'required|date',
+                'to'   => 'required|date|after_or_equal:from',
+            ]);
+    
+            $from = Carbon::parse($request->query('from'));
+            $to   = Carbon::parse($request->query('to'));
+    
+            // 1) Fetch schedule rows overlapping [from…to]
+            $schedules = assignedAppointment::with('appointment')
+                ->where('staff_id', $staffId)
+                ->whereDate('ending_date',   '>=', $from)
+                ->whereDate('starting_date', '<=', $to)
+                ->get();
+    
+            $results = [];
+    
+            foreach ($schedules as $sched) {
+                // 2) Determine the overlap window
+                $startDate = $from->greaterThan($sched->starting_date)
+                             ? $from
+                             : $sched->starting_date;
+                $endDate   = $to->lessThan($sched->ending_date)
+                             ? $to
+                             : $sched->ending_date;
+    
+                // 3) Iterate each date in that window
+                foreach (CarbonPeriod::create($startDate, $endDate) as $day) {
+                    if (! in_array(strtolower($day->format('D')), $sched->calender_days)) {
+                        continue;
+                    }
+    
+                    $appt = $sched->appointment; // may be null
+                    $clientName = $appt ? $appt->name : null;
+    
+                    $results[] = [
+                        'date'        => $day->toDateString(),
+                        'day'         => $day->format('l'),
+                        'start_time'  => Carbon::createFromFormat('H:i', $sched->starting_time)
+                                                 ->format('g:i A'),
+                        'end_time'    => Carbon::createFromFormat('H:i', $sched->ending_time)
+                                                 ->format('g:i A'),
+                        'client_name' => $clientName,
+                    ];
+                }
+            }
+    
+            return response()->json([
+                'staff_id' => (int)$staffId,
+                'results'  => $results,
+            ]);
+
+          
+        }
+
+       }
+
 
  
 
 
    
-}
+

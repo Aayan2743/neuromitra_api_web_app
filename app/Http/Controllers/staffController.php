@@ -17,9 +17,10 @@ class staffController extends Controller
         $validate=Validator::make($request->all(),[
             'name'=>'required',
             'email' => 'required|email|unique:users,email',
-           'contact' => 'required|digits:10|unique:users,contact',
+             'contact' => 'required|digits:10|unique:users,contact',
             'password'=>'required|min:6',
             'role' => 'required|in:Therapist,Counceller',
+            'gender' => 'required|in:Male,Female',
         ],[
 
             'role.in'=>'Role Should be Therapist or Counceller'
@@ -43,6 +44,7 @@ class staffController extends Controller
                 'contact'=>$request->contact,
                 'password'=>Hash::make($request->password),
                 'role'=>$request->role,
+                'gender'=>$request->gender,
                 'unique_hostal_id'=>env('SAAS_KEY'),
             ]);
 
@@ -76,58 +78,68 @@ class staffController extends Controller
 
     }
 
-    public function viewStaff($id = null){
-        try{
+    public function viewStaff(Request $request, $id = null)
+{
+    try {
+        if ($id) {
+            $staff = User::find($id);
 
-            if($id){
-                $staff = User::find($id);
-
-                    if (!$staff) {
-                        return response()->json([
-                            'status'=>false,
-                            'message' => 'Staff not found'], 200);
-                    }
-
-                    if( $staff->role=="Admin" || $staff->role=="User"  ){
-                        return response()->json([
-                            'status'=>false,
-                            'message' =>  'Staff not found'], 200);
-                    }
-
-                    if( $staff->deleted_at!=null){
-                        return response()->json([
-                            'status'=>false,
-                            'message' => 'Staff Deleted '], 200);
-                    }
-                    
-
-
-                    return response()->json([
-                        'status'=>true,
-                        'data' =>  $staff], 200);
-
+            if (!$staff) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Staff not found'
+                ], 200);
             }
 
-                $getStaff=user::where('role','Therapist')->orWhere('role','Counceller')->
-                where('deleted_at','=','0')
-                ->
-                get();
+            if ($staff->role === 'Admin' || $staff->role === 'User') {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Staff not found'
+                ], 200);
+            }
+
+            if ($staff->deleted_at !== null) {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Staff Deleted'
+                ], 200);
+            }
 
             return response()->json([
-                     'status'=>true,
-                    'data'=> $getStaff,
-            ]);
-
-        }catch(\Exception $e){
-            return response()->json(
-                [
-                    'status'=>false,
-                    'message'=> $e->getMessage(),
-                ],
-               200);
+                'status' => true,
+                'data' => $staff
+            ], 200);
         }
 
+        $query = User::whereIn('role', ['Therapist', 'Counceller'])
+                              ->where('deleted_at', 0) ;
+
+                  
+
+        if ($request->filled('gender')) {
+            $query->where('gender', $request->input('gender'));
+        }
+
+        if ($request->filled('role')) {
+            $query->where('role', $request->input('role'));
+        }
+
+        $getStaff = $query->get();
+
+        return response()->json([
+            'status' => true,
+            'data' => $getStaff
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => false,
+            'message' => $e->getMessage()
+        ], 200);
     }
+}
+
+
 
     public function update(Request $request, $id = null)
     {
