@@ -31,4 +31,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+
+    'google' => [
+
+      'credentials' => storage_path(env('GOOGLE_CREDENTIALS', 'app/google/credentials.json')),   
+    
+
+    'calendar_id' => env('GOOGLE_CALENDAR_ID', 'default@neuromitra.iam.gserviceaccount.com'),
+],
+
 ];

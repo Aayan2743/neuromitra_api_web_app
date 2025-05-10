@@ -18,12 +18,23 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\PhonePaycontroller;
 use App\Http\Controllers\ChildController;
+use App\Http\Controllers\MeetingController;
 
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
 
-Route::get('staff_engagged/{id}',[AppointmentController::class,'staff_engagged']);
-Route::get('staff_free/{id}',[AppointmentController::class,'free_days']);
+
+Route::post('meetings', [MeetingController::class, 'createMeet']);
+// Route::get('/oauth2/redirect', [MeetingController::class, 'redirectToGoogle'])
+//     ->name('oauth2.redirect');
+
+Route::get('/oauth2/redirect', [MeetingController::class, 'redirectToGoogle'])
+     ->name('oauth2.redirect');
+Route::get('/oauth2/callback',  [MeetingController::class, 'handleGoogleCallback'])
+     ->name('oauth2.callback');
+
+
+
 
 
 
@@ -93,8 +104,9 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
     Route::post('assigned-staff',[AppointmentController::class,'assign_to_staff']);
 
 
-    // staff availability
- 
+    // staff assigned to client availability
+    Route::post('assigned_appointment',[AppointmentController::class,'create_appointment']);   // woeking fine
+    Route::post('check_availability',[AppointmentController::class,'check_availability']);   // woeking fine
     
 
 
