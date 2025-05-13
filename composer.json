@@ -7,8 +7,9 @@
     "require": {
         "php": "^8.0.2",
         "dipesh79/laravel-phonepe": "^1.0",
+        "firebase/php-jwt": "^6.11",
         "google/apiclient": "^2.18",
-        "guzzlehttp/guzzle": "^7.2",
+        "guzzlehttp/guzzle": "^7.9",
         "kreait/firebase-php": "^6.9",
         "laravel/framework": "^9.19",
         "laravel/sanctum": "^3.0",

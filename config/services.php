@@ -34,10 +34,17 @@ return [
 
     'google' => [
 
-      'credentials' => storage_path(env('GOOGLE_CREDENTIALS', 'app/google/credentials.json')),   
+      'credentials_json' => storage_path(env('GOOGLE_CREDENTIALS', 'app/google/credentials.json')),   
     
 
-    'calendar_id' => env('GOOGLE_CALENDAR_ID', 'default@neuromitra.iam.gserviceaccount.com'),
+    'calendar_id' => env('GOOGLE_CALENDAR_ID', 'calander@neuromitra.iam.gserviceaccount.com'),
 ],
+
+
+    // …
+    'zoom' => [
+        'key'    => env('ZOOM_API_KEY'),
+        'secret' => env('ZOOM_API_SECRET'),
+    ],
 
 ];

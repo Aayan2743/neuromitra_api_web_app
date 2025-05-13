@@ -28,4 +28,11 @@ class assignedAppointment extends Model
     {
         return $this->belongsTo(appiontment::class, 'app_id', 'id');
     }
+
+    
+        public function staff()
+        {
+            // assuming your users table holds staff as well
+            return $this->belongsTo(User::class, 'staff_id');
+        }
 }

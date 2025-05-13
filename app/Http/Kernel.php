@@ -69,6 +69,7 @@ class Kernel extends HttpKernel
         'RozarPayAddOn' => \App\Http\Middleware\RozarPayAddOn::class,  //  RozarPayAddOn Access
         'checkAdmin' => \App\Http\Middleware\checkAdmin::class,  //  Only admin access
         'checkUser' => \App\Http\Middleware\checkUser::class,  //  Only user access
+        'checkTherapist' => \App\Http\Middleware\checkTherapist::class,  //  Only user Therapist
 
     ];
 }

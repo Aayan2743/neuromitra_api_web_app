@@ -11,7 +11,7 @@ class child extends Model
 
     public $table="childs";
 
-    // public $timestamps=false;
+    // public $tiimestamps=false;
 
     public $guarded=[];
 }

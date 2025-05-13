@@ -19,20 +19,16 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\PhonePaycontroller;
 use App\Http\Controllers\ChildController;
 use App\Http\Controllers\MeetingController;
+use App\Http\Controllers\UserAddressController;
+use App\Services\GoogleCalendarService;
 
 
 Route::get('/send-notification', [NotificationController::class, 'send']);
 
 
-Route::post('meetings', [MeetingController::class, 'createMeet']);
-// Route::get('/oauth2/redirect', [MeetingController::class, 'redirectToGoogle'])
-//     ->name('oauth2.redirect');
 
-Route::get('/oauth2/redirect', [MeetingController::class, 'redirectToGoogle'])
-     ->name('oauth2.redirect');
-Route::get('/oauth2/callback',  [MeetingController::class, 'handleGoogleCallback'])
-     ->name('oauth2.callback');
-
+// staff login uplocionmg appoibntments therapy in furture place correct place
+ 
 
 
 
@@ -108,7 +104,8 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
     Route::post('assigned_appointment',[AppointmentController::class,'create_appointment']);   // woeking fine
     Route::post('check_availability',[AppointmentController::class,'check_availability']);   // woeking fine
     
-
+    // admin  side upcoming appointments give 
+    Route::post('/staff/appointments', [AppointmentController::class, 'staffAppointments']);
 
 
 });
@@ -139,7 +136,29 @@ Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],f
        Route::put('edit-child/{id}',[ChildController::class,'update']);
        Route::delete('delete-child/{id}',[ChildController::class,'delete']);
 
+
+       // address module
+        Route::post('create-address', [UserAddressController::class, 'createAddress']);
+        Route::get('view-address/{id?}', [UserAddressController::class, 'viewAddress']);
+        Route::put('update-address/{id?}', [UserAddressController::class, 'updateAddress']);
+        Route::delete('delete-address/{id?}', [UserAddressController::class, 'deleted']);
+
+         // upcoming appointments
+        Route::get('/upcoming-appointments', [AppointmentController::class, 'userAppointments']);
+        // get all slots by app_id
+        Route::get('/appointments_by_id/{app_id}', [AppointmentController::class, 'slotsByAppointment']);
+
+
+
 });
+
+Route::group(['middleware'=>['jwt.verify', 'checkTherapist'],  'prefix' => 'therapist'],function($routes){
+   Route::get('/staff-upcoming-appointments', [AppointmentController::class, 'staffUpcomingAppointments']);
+   Route::post('/add_session_tracker/{id?}', [AppointmentController::class, 'tracker']);
+
+});
+
+
 
 // test on phonepay
 

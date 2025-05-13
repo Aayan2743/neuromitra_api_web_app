@@ -59,42 +59,45 @@ class assesementsController extends Controller
     // view and find questions filter by type  kids or audlts
     public function viewQuestions(Request $request, $id=null){
            
-        try {
-            $query = assesementguideModel::query();
-    
-            // Filter by ID if passed
-            if ($id) {
-               
-                $query->find($id);
-            }
-    
-            // If "type" is present, validate and apply it
-            if ($request->has('type')) {
-                if (in_array($request->type, [0, 1])) {
-                    $query->where('for_whome', $request->type);
-                } else {
-                 
-                    return response()->json([
-                        'status' => true,
-                        'data' => [],
-                    ]);
-                }
-            }
-    
-            $results = $query->get();
-    
+      try {
+    // If ID is passed, return the single object
+    if ($id) {
+        $result = assesementguideModel::find($id);
+
+        return response()->json([
+            'status' => true,
+            'data' => $result,
+        ]);
+    }
+
+    // Build the query for other filters
+    $query = assesementguideModel::query();
+
+    if ($request->has('type')) {
+        if (in_array($request->type, [0, 1])) {
+            $query->where('for_whome', $request->type);
+        } else {
             return response()->json([
                 'status' => true,
-                'data' => $results,
+                'data' => [],
             ]);
-    
-        } catch (\Exception $e) {
-            return response()->json([
-                'status' => false,
-                'message' => $e->getMessage(),
-            ], 200);
         }
-          
+    }
+
+    $results = $query->get();
+
+    return response()->json([
+        'status' => true,
+        'data' => $results,
+    ]);
+
+} catch (\Exception $e) {
+    return response()->json([
+        'status' => false,
+        'message' => $e->getMessage(),
+    ]);
+}
+
     
     
     }

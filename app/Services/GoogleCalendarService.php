@@ -1,75 +1,61 @@
 <?php
 namespace App\Services;
 
-use Google_Client;
-use Google_Service_Calendar;
-use Google_Service_Calendar_Event;
-use Google_Service_Calendar_EventDateTime;
+use Google\Client;
+
+use Google\Service\Calendar;
+use Google\Service\Calendar\Event;
+
+use Google\Service\Calendar\ConferenceDataSource;
+use Google\Service\Calendar\CreateConferenceRequest;
 
 class GoogleCalendarService
 {
-    protected Google_Service_Calendar $calendar;
+   protected Calendar $calendar;
 
-    public function __construct()
+   public function __construct()
     {
-      
-         $client = new Google_Client();
-
-        // 2) Load your JSON creds
-        $path = config('services.google.credentials');
-        if (! file_exists($path)) {
-            throw new RuntimeException("Google credentials not found at: {$path}");
-        }
-        $client->setAuthConfig($path);
-
-        // 3) Set scopes & options
-        $client->addScope(Google_Service_Calendar::CALENDAR);
+        $client = new Client();
+        $client->setAuthConfig(config('services.google.credentials_json'));
+        $client->addScope(Calendar::CALENDAR);
         $client->setAccessType('offline');
-        $client->setPrompt('consent');
+        // If using a service account with domain-wide delegation:
+        $client->setSubject('teamozrit@gmail.com');
 
-        // 4) **Initialize** the calendar property here
-        $this->calendar = new Google_Service_Calendar($client);
+        // $calendarService = new \Google\Service\Calendar($client);
 
-
-
+        $this->calendar = new Calendar($client);
     }
-
-    /**
-     * Create an event with a Meet link.
-     *
-     * @param  string    $summary
-     * @param  \DateTime $start
-     * @param  \DateTime $end
-     * @param  array     $attendeesEmails
-     * @return Google_Service_Calendar_Event
-     */
-    public function createEventWithMeet(
-        string $summary,
-        \DateTime $start,
-        \DateTime $end,
-        array $attendeesEmails = []
-    ): Google_Service_Calendar_Event {
-        // Build the event
-        $event = new Google_Service_Calendar_Event([
-            'summary'     => $summary,
-            'start'       => ['dateTime' => $start->format(\DateTime::RFC3339)],
-            'end'         => ['dateTime' => $end  ->format(\DateTime::RFC3339)],
-            'attendees'   => array_map(fn($e) => ['email' => $e], $attendeesEmails),
+     public function createMeeting(string $summary, \DateTime $start, \DateTime $end): string
+    {
+        // Build the event, including conferenceData as a plain array
+        $event = new Event([
+            'summary'        => $summary,
+            'start'          => ['dateTime' => $start->format(\DateTime::RFC3339)],
+            'end'            => ['dateTime' => $end->format(\DateTime::RFC3339)],
             'conferenceData' => [
                 'createRequest' => [
+                    'requestId'             => uniqid(),           // any unique string
                     'conferenceSolutionKey' => ['type' => 'hangoutsMeet'],
-                    'requestId'             => uniqid('meet_'),
                 ],
             ],
         ]);
 
-        // Insert with conferenceDataVersion=1 or 2
-        return $this->calendar
-            ->events
-            ->insert(
-                config('services.google.calendar_id'),
-                $event,
-                ['conferenceDataVersion' => 1]
-            );
+        // Insert the event; you MUST include conferenceDataVersion=1
+        $created = $this->calendar->events->insert(
+            config('services.google.calendar_id'),
+            $event,
+            ['conferenceDataVersion' => 1]
+        );
+
+        // Find the “video” entry point (that’s the Meet link)
+        foreach ($created->getConferenceData()->getEntryPoints() as $entry) {
+            if ($entry->getEntryPointType() === 'video') {
+                return $entry->getUri();
+            }
+        }
+
+        throw new \Exception('No Meet link was created.');
     }
+   
 }

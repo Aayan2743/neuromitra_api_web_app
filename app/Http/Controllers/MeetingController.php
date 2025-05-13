@@ -7,102 +7,126 @@ use App\Services\GoogleCalendarService;
 use Validator;
 use Google_Client;
 use Google_Service_Calendar;
+use MacsiDigital\Zoom\Facades\Zoom;
+use Carbon\Carbon;
+use App\Services\ZoomService;
+use Google\Client as GoogleClient;
+use Google\Service\Calendar as GoogleCalendar;
 
 use Illuminate\Support\Facades\Session;
 
 class MeetingController extends Controller
 {
-    //
 
-     public function createMeet(Request $request, GoogleCalendarService $gcal)
+
+      public function __construct(protected ZoomService $zoom) {}
+
+    public function createOnCustomDates(Request $request)
     {
-        $validator =Validator::make($request->all(),[
-             'summary'    => 'required|string',
-            'start_time' => 'required|date_format:Y-m-d H:i',
-            'end_time'   => 'required|date_format:Y-m-d H:i|after:start_time',
-            'attendees'  => 'array',
-            'attendees.*'=> 'email',
-
-        ]);
-
-        if($validator->fails()){
-            return response()->json([
-                'status'=>false,
-                'message'=>$validator->errors()->first()
-
-            ]);
+        // If “dates” came in as a JSON-encoded string, decode it:
+        if (is_string($request->input('dates'))) {
+            $request->merge(['dates' => json_decode($request->input('dates'), true)]);
         }
 
-      
-          $client = new Google_Client();
-        $client->setAuthConfig(config('services.google.credentials'));
-        $client->addScope(Google_Service_Calendar::CALENDAR);
+        $data = $request->validate([
+            'topic'      => 'required|string',
+            'dates'      => 'required|array',
+            'dates.*'    => 'required|date_format:d-m-Y',
+            'start_time' => 'required|date_format:H:i',
+            'end_time'   => 'required|date_format:H:i|after:start_time',
+        ]);
+
+        $duration = Carbon::parse($data['start_time'])
+                          ->diffInMinutes(Carbon::parse($data['end_time']));
+
+        $results = [];
+        foreach ($data['dates'] as $date) {
+            $startIso = Carbon::createFromFormat(
+                'd-m-Y H:i',
+                "{$date} {$data['start_time']}",
+                'Asia/Kolkata'
+            )->toIso8601String();
+
+            // build the payload
+            $payload = [
+                'topic'      => "{$data['topic']} ({$date})",
+                'type'       => 2,               // scheduled meeting
+                'start_time' => $startIso,
+                'duration'   => $duration,
+                'timezone'   => 'Asia/Kolkata',
+                'settings'   => [
+                    'host_video'        => true,
+                    'participant_video' => true,
+                    'waiting_room'      => true,
+                    'join_before_host'  => false,
+                ],
+            ];
+
+            // call Zoom
+            $results[] = $this->zoom->createMeeting($payload);
+        }
+
+        return response()->json($results);
+    }
+
+    // nnnn
+     public function redirectToGoogle()
+    {
+        $client = new GoogleClient();
+        // Point this at the JSON you downloaded from Cloud Console:
+        $client->setAuthConfig(config('services.google.credentials_json'));
+        $client->addScope(GoogleCalendar::CALENDAR);
         $client->setAccessType('offline');
         $client->setPrompt('consent');
+        $client->setRedirectUri('http://localhost:8000/api/google/callback');
 
-        // 3) Attach the saved token
-        $token = Session::get('google_token');
-        if (! $token) {
-            // no token? send them to authorize
-            return redirect()->route('oauth2.redirect');
+       dd($client->createAuthUrl());
+
+    return redirect()->away($client->createAuthUrl());
+
+        // Laravel’s redirect helper will send them to Google
+
+    }
+
+    public function handleGoogleCallback(Request $request)
+    {
+        $client = new GoogleClient();
+        $client->setAuthConfig(config('services.google.credentials_json'));
+        $client->addScope(GoogleCalendar::CALENDAR);
+        $client->setAccessType('offline');
+
+        // Exchange the authorization code for an access token
+        $token = $client->fetchAccessTokenWithAuthCode($request->input('code'));
+
+        if (isset($token['error'])) {
+            abort(500, 'Google OAuth error: ' . $token['error_description']);
         }
-        $client->setAccessToken($token);
 
-        // 4) Refresh if expired
-        if ($client->isAccessTokenExpired() && $client->getRefreshToken()) {
-            $newToken = $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
-            Session::put('google_token', $newToken);
-            $client->setAccessToken($newToken);
-        }
-
-        // 5) Create the service & event
-        $service = new Google_Service_Calendar($client);
-
-        $event = $service->events->insert(
-            config('services.google.calendar_id'),
-            new \Google_Service_Calendar_Event([
-                'summary'     => $request->summary,
-                'start'       => ['dateTime' => (new \DateTime($request->start_time))->format(\DateTime::RFC3339)],
-                'end'         => ['dateTime' => (new \DateTime($request->end_time))->format(\DateTime::RFC3339)],
-                'attendees'   => array_map(fn($e)=>['email'=>$e], $data['attendees'] ?? []),
-                'conferenceData' => [
-                    'createRequest' => [
-                        'conferenceSolutionKey' => ['type'=>'hangoutsMeet'],
-                        'requestId'             => uniqid(),
-                    ],
-                ],
-            ]),
-            ['conferenceDataVersion'=>1]
-        );
-
-        // 6) Return the Meet link
-        return response()->json([
-            'meet_link' => $event
-                ->getConferenceData()
-                ->getEntryPoints()[0]
-                ->uri,
+        // $token contains:
+        // - access_token
+        // - expires_in
+        // - refresh_token (only on first consent)
+        // Persist this to your database (or session) tied to the logged‐in user
+        auth()->user()->update([
+            'google_access_token'  => $token['access_token'],
+            'google_refresh_token' => $token['refresh_token'] ?? null,
+            'google_token_expires' => now()->addSeconds($token['expires_in']),
         ]);
 
 
+        return response()->json([
+            'status'=>true,
+            'message'=>'Google Calendar linked'
+        ]);
+        // return redirect('/')->with('success', 'Google Calendar linked!');
     }
+
+ 
 
 
 
     
-    public function redirectToGoogle()
-    {
-        return app(\App\Http\Controllers\MeetingController::class)
-            ->redirectToGoogle();
-    }
-
-    /**
-     * Handle the OAuth callback.
-     */
-    public function handleGoogleCallback(Request $request)
-    {
-        return app(\App\Http\Controllers\MeetingController::class)
-            ->handleGoogleCallback($request);
-    }
+   
 
 
 
@@ -115,24 +139,7 @@ class MeetingController extends Controller
 
 
 
-      public function handleGoogleCallback(Request $request)
-    {
-        $client = new Google_Client();
-        $client->setAuthConfig(config('services.google.credentials'));
-        $client->setRedirectUri(route('oauth2.callback'));
 
-        // Exchange the code for an access token
-        $token = $client->fetchAccessTokenWithAuthCode($request->get('code'));
-        if (isset($token['error'])) {
-            return response()->json($token, 400);
-        }
-
-        // Store the token in session (or your database)
-        Session::put('google_token', $token);
-        $client->setAccessToken($token);
-
-        return redirect('/')->with('status', 'Google Calendar connected!');
-    }
 
 
 }
