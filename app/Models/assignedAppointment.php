@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\appiontment;
+use App\Models\session_tracking_details;
 
 class assignedAppointment extends Model
 {
@@ -34,5 +35,11 @@ class assignedAppointment extends Model
         {
             // assuming your users table holds staff as well
             return $this->belongsTo(User::class, 'staff_id');
+        }
+
+          public function feedback()
+        {
+            // assuming your users table holds staff as well
+            return $this->hasOne(session_tracking_details::class, 'assigned_id','id');
         }
 }

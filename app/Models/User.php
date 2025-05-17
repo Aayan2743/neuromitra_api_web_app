@@ -47,7 +47,18 @@ class User extends Authenticatable implements JWTSubject
     ];
 
 
+    protected $appends = ['profile_pic_url'];
 
+    public function getProfilePicUrlAttribute(): ?string
+    {
+        if (! $this->profile_pic) {
+            return null;
+        }
+
+        // Use Storage::url() if you prefer “/storage/…”;
+        // asset() will prepend full scheme+host.
+        return asset('storage/' . $this->profile_pic);
+    }
 
  
 }

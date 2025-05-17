@@ -38,7 +38,7 @@ class AppointmentController extends Controller
                             'gender' => 'required|in:Male,Female',
                             'appointment_mode' => 'required|in:online,offline',
                             'appointment_request_date' => 'required|date|after_or_equal:today',
-                            // 'service_name' => 'required',
+                          
                             'service_id' => 'required',
                             'days' => 'required|numeric',
                             'amount' => 'required|numeric',
@@ -120,9 +120,9 @@ class AppointmentController extends Controller
                             'service_id' => 'required',
                             'days' => 'required|numeric',
                             'amount' => 'required|numeric',
-                            'address' => 'required|string',
+                            'address' => 'required|exists:user_address,id',
                             'calender_days' => 'required|array|size:5',
-                            'calender_days.*' => 'in:mon,tue,wed,thu,fri,sat,sun',
+                            'calender_days.*' => 'in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
                         ];
 
                         $validator = Validator::make($req->all(), $rules);
@@ -133,7 +133,9 @@ class AppointmentController extends Controller
                             ], 200);
                         }
 
-                        $check_patient = Child::find($req->patient_id);
+                        // $check_patient = Child::find($req->patient_id);
+                        $check_patient = Child::find((int) $req->patient_id);
+
                         if($check_patient && $check_patient->is_parent==false ){
                            
                             // dd( $check_patient);
@@ -200,6 +202,142 @@ class AppointmentController extends Controller
 
        // disaplay all details
        public function index(Request $request,$id=null){
+       
+
+
+    //      try {
+    //     // 1) Start the query and eager-load staff:
+    //     $query = appiontment::with('staff:id,name,email'); 
+    //     // you can list whatever staff fields you need
+
+    //     // 2) Filter by ID if given:
+    //     if ($id) {
+    //         $query->where('id', $id);
+    //     }
+
+    //     // 3) Filter by mode:
+    //     if ($request->filled('mode')) {
+    //         if (in_array($request->mode, ['online','offline'])) {
+    //             $query->where('appointment_mode', $request->mode);
+    //         } else {
+    //             return response()->json(['status'=>true,'data'=>[]]);
+    //         }
+    //     }
+
+    //     // 4) Filter by service name:
+    //     if ($request->filled('service_name')) {
+    //         $query->where('service_name','LIKE','%'.$request->service_name.'%');
+    //     }
+
+    //     // 5) Only open appointments:
+    //     // $query->where('status','open');
+
+    //     if ($request->has('status')) {
+    //             if (in_array($request->status, ['open', 'assigned','complete','cancelled'])) {
+    //                 $query->where('status', $request->status);
+    //             } else {
+                 
+    //                 return response()->json([
+    //                     'status' => true,
+    //                     'data' => [],
+    //                 ]);
+    //             }
+    //         }
+
+
+    //     // 6) Get results with nested staff:
+    //     $results = $query->paginate(10);
+    //     // $results = $query->get();
+
+    //     return response()->json([
+    //         'status' => true,
+    //         'data'   => $results,   // each item has a `staff` object
+    //     ]);
+
+    // } catch (\Exception $e) {
+    //     return response()->json([
+    //         'status'  => false,
+    //         'message' => $e->getMessage(),
+    //     ], 200);
+    // }
+
+
+
+    try {
+    // Start query with eager-loading of staff and assignedSlots
+    $query = appiontment::with([
+        'staff:id,name,email',
+        'assignedSlots' => function ($q) {
+            $q->select('id', 'app_id', 'status');
+        }
+    ]);
+
+    if ($id) {
+        $query->where('id', $id);
+    }
+
+    if ($request->filled('mode')) {
+        if (in_array($request->mode, ['online', 'offline'])) {
+            $query->where('appointment_mode', $request->mode);
+        } else {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+    }
+
+    if ($request->filled('service_name')) {
+        $query->where('service_name', 'LIKE', '%' . $request->service_name . '%');
+    }
+
+    if ($request->has('status')) {
+        if (in_array($request->status, ['open', 'assigned', 'complete', 'cancelled'])) {
+            $query->where('status', $request->status);
+        } else {
+            return response()->json(['status' => true, 'data' => []]);
+        }
+    }
+
+    $results = $query->paginate(10);
+
+    // Map result to add counts
+    $results->getCollection()->transform(function ($item) {
+        $start = 0;
+        $end = 0;
+
+        foreach ($item->assignedSlots as $slot) {
+            if (strtolower($slot->status) === 'start') {
+                $start++;
+            } elseif (strtolower($slot->status) === 'end') {
+                $end++;
+            }
+        }
+
+        $item->total_slots = $item->assignedSlots->count();
+        $item->start_count = $start;
+        $item->end_count   = $end;
+
+        unset($item->assignedSlots); // optional: remove raw data if not needed
+
+        return $item;
+    });
+
+    return response()->json([
+        'status' => true,
+        'data' => $results,
+    ]);
+} catch (\Exception $e) {
+    return response()->json([
+        'status' => false,
+        'message' => $e->getMessage(),
+    ], 200);
+}
+
+    
+    
+       }
+
+       // only user auth login
+
+          public function user_appointments(Request $request,$id=null){
         try {
             $query = appiontment::query();
     
@@ -221,8 +359,28 @@ class AppointmentController extends Controller
                     ]);
                 }
             }
+
+              if ($request->filled('mode')) {
+                if (in_array($request->mode, ['online', 'offline'])) {
+                    $query->where('appointment_mode', $request->mode);
+                } else {
+                    return response()->json([
+                        'status' => true,
+                        'data'   => [],
+                    ]);
+                }
+            }
+
+            // source filetr
+
+            if ($request->filled('service_name')) {
+             $query->where('service_name', 'LIKE', '%' . $request->service_name . '%');
+          }
+
+
+
     
-            $results = $query->get();
+            $results = $query->where('user_id',auth()->user()->id)->paginate(5);
     
             return response()->json([
                 'status' => true,
@@ -239,9 +397,48 @@ class AppointmentController extends Controller
     
     
        }
-
   
 
+       public function sessiontracking($id=null){
+         try {
+            $query = session_tracking_details::query();
+    
+            // Filter by ID if passed
+            if ($id) {
+               
+                $result = session_tracking_details::where('assigned_id',$id)->get(); // Use find() directly
+
+                    return response()->json([
+                        'status' => true,
+                        'data' => $result,
+                    ]);
+            }
+    
+            // If "type" is present, validate and apply it
+          
+    
+            $results = $query->where('uid',auth()->user()->id)->paginate(5);
+    
+            return response()->json([
+                'status' => true,
+                'data' => $results,
+            ]);
+    
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => false,
+                'message' => $e->getMessage(),
+            ], 200);
+        }
+
+
+      
+
+
+
+
+
+       }
 
 
 
@@ -495,7 +692,7 @@ if ($validator->fails()) {
     // 4) finalize ordering & execute
     $appointments = $q->orderBy('starting_date')
         ->orderBy('starting_time')
-        ->get()
+        ->paginate(10)
         ->map(function($a) use ($now) {
             $start = Carbon::parse("{$a->starting_date} ");
             $end   = Carbon::parse("{$a->starting_date} ");
@@ -638,84 +835,130 @@ if ($validator->fails()) {
                 // staff upcoming appointments
                 
                  public function staffUpcomingAppointments(Request $request): JsonResponse
-    {
-      
-             $staff = auth()->user();
+               {
+             
+$staff = auth()->user();
+$now = Carbon::now();
+
+// 1. Validate input
+$request->validate([
+    'search' => 'nullable|string',
+    'search_name' => 'nullable|string',
+    'status' => 'nullable|string|in:not started,start,end', // optional status filter
+]);
+
+$search = strtolower($request->input('search'));
+$searchName = strtolower($request->input('search_name'));
+$statusFilter = strtolower($request->input('status'));
+
+// 2. Base query
+$q = AssignedAppointment::with(['appointment.user'])
+    ->where('staff_id', $staff->id);
+
+// 3. Apply `search` filter
+if ($search === 'today') {
     $today = Carbon::today()->toDateString();
-    $now   = Carbon::now();
+    $q->whereDate('starting_date', $today);
+} elseif ($search === 'completed') {
+    $today = Carbon::today()->toDateString();
+    $q->whereDate('starting_date', '<', $today);
+} elseif ($search !== 'all' && $search) {
+    $today = Carbon::today()->toDateString();
+    $q->whereDate('starting_date', '>=', $today);
 
-    // 2) Validate the optional search parameter
-    $request->validate([
-        'search' => 'nullable|string',
-    ]);
-    $search = $request->input('search');
+    $q->where(function ($q2) use ($search) {
+        if (ctype_digit($search)) {
+            $q2->where('app_id', $search);
+        }
 
-    // 3) Build the base query: only this staff's future slots
-    $q = AssignedAppointment::with(['appointment.user'])
-        ->where('staff_id', $staff->id)
-        ->whereDate('starting_date', '>=', $today);
+        $q2->orWhere('starting_date', 'like', "%{$search}%")
+            ->orWhereHas('appointment', fn($q4) =>
+                $q4->where('appointment_mode', 'like', "%{$search}%"));
+    });
+}
 
-    // 4) Apply search filters if a search term was provided
-    if ($search) {
-        $q->where(function($q2) use ($search) {
-            // a) If it's purely numeric, match exactly on app_id
-            if (ctype_digit($search)) {
-                $q2->where('app_id', $search);
-            }
+// 4. Apply `status` filter
+if ($statusFilter) {
+    $q->where('status', $statusFilter);
+} else {
+    // Default: show only "not started" and "start" statuses
+    $q->whereIn('status', ['not started', 'start']);
+}
 
-            // b) Match partial dates
-            $q2->orWhere('starting_date', 'like', "%{$search}%")
-               // c) Match customer name
-               ->orWhereHas('appointment.user', function($q3) use ($search) {
-                   $q3->where('name', 'like', "%{$search}%");
-               })
-               // d) Match appointment mode
-               ->orWhereHas('appointment', function($q4) use ($search) {
-                   $q4->where('appointment_mode', 'like', "%{$search}%");
-               });
-        });
+// 5. Apply `search_name` filter
+if ($searchName) {
+    $q->whereHas('appointment.user', function ($q) use ($searchName) {
+        $q->whereRaw('LOWER(name) LIKE ?', ["%{$searchName}%"]);
+    });
+}
+
+// 6. Fetch all slots to calculate status counts per appointment_id
+$allSlots = (clone $q)->get();
+$statusCounts = [];
+
+foreach ($allSlots as $slot) {
+    $appointmentId = $slot->app_id;
+    $status = strtolower($slot->status);
+
+    if (!isset($statusCounts[$appointmentId])) {
+        $statusCounts[$appointmentId] = [
+            'total' => 0,
+            'start' => 0,
+            'end'   => 0,
+        ];
     }
 
-    // 5) Fetch, sort and map to the response shape
-    $slots = $q->orderBy('starting_date')
-        ->orderBy('starting_time')
-        ->get()
-        ->map(function($slot) use ($now) {
-            // Determine status based on dates/times
-            $start = Carbon::parse("{$slot->starting_date}");
-            $end   = Carbon::parse("{$slot->starting_date} ");
+    $statusCounts[$appointmentId]['total']++;
 
-            if ($now->gt($end)) {
-                $status = 'complete';
-            } elseif ($now->between($start, $end)) {
-                $status = 'inprocess';
-            } else {
-                $status = 'upcoming';
-            }
+    if ($status === 'start') {
+        $statusCounts[$appointmentId]['start']++;
+    } elseif ($status === 'end') {
+        $statusCounts[$appointmentId]['end']++;
+    }
+}
 
-            return [
-                'slot_id'=>$slot->id,
-                'appointment_id' => $slot->app_id,
-                'mode'           => $slot->appointment->appointment_mode,
-                'customer_id'    => $slot->appointment->user->id,
-                'customer_name'  => $slot->appointment->user->name,
-                'date'           => $start->format('Y-m-d'),
-                'start_time'     => $slot->starting_time,
-                'end_time'       => $slot->ending_time,
-                'status'         => $status,
-                'url'            => $slot->meet_url ?? 'N/A',
-            ];
-        });
+// 7. Paginate results
+$paginated = $q->orderBy('starting_date')
+               ->orderBy('starting_time')
+               ->paginate(20);
 
-    // 6) Return the JSON response
-    return response()->json([
-        'status' => true,
-        'data'   => $slots->values(),
-    ]);
+// 8. Map each slot to include the counts
+$slots = $paginated->getCollection()->map(function ($slot) use ($statusCounts) {
+    $appointmentId = $slot->app_id;
+    $counts = $statusCounts[$appointmentId] ?? ['total' => 0, 'start' => 0, 'end' => 0];
+
+    return [
+        'slot_id'         => $slot->id,
+        'appointment_id'  => $appointmentId,
+        'mode'            => $slot->appointment->appointment_mode,
+        'customer_id'     => $slot->appointment->user->id,
+        'customer_name'   => $slot->appointment->user->name,
+        'date'            => Carbon::parse($slot->starting_date)->format('Y-m-d'),
+        'start_time'      => $slot->starting_time,
+        'end_time'        => $slot->ending_time,
+        'status'          => $slot->status,
+        'url'             => $slot->meet_url ?? 'N/A',
+        'status_counts'   => [
+            'total' => $counts['total'],
+            'start' => $counts['start'],
+            'end'   => $counts['end'],
+        ],
+    ];
+});
+
+// 9. Set the updated collection back to the paginator
+$paginated->setCollection($slots);
+
+// 10. Return paginated response
+return response()->json([
+    'status' => true,
+    'data'   => $paginated,
+]);
+
+        
 
 
-
-                }
+                  }
 
 
                 // search by app_id and get all slote from user side only
@@ -738,7 +981,8 @@ if ($validator->fails()) {
         // 2) Fetch all slots, eager-loading both staff and the appointment's user
         $slots = AssignedAppointment::with([
                 'staff',
-                'appointment.user'  // make sure Appiontment model has user() relationship
+                'appointment.user',
+                'feedback'
             ])
             ->where('app_id', $app_id)
             ->orderBy('starting_date')
@@ -756,9 +1000,11 @@ if ($validator->fails()) {
                     $computed = 'upcoming';
                 }
 
+
+                // dd($slot->feedback);
                 // pull the appointment’s user
                 $user = $slot->appointment;
- $appt = $slot->appointment;
+                $appt = $slot->appointment;
                 
                 return [
                     'slot_id'         => $slot->id,
@@ -768,6 +1014,8 @@ if ($validator->fails()) {
                     'raw_status'      => $slot->status,
                     'computed_status' => $computed,
                     'url' => $slot->meet_url ?? "N/A",
+                      'feedback' => $slot->feedback,
+                  
 
                     'staff' => [
                         'id'    => $slot->staff->id,
@@ -836,11 +1084,60 @@ if ($validator->fails()) {
 
                               $slot->update([
                                 'session_trackling_status' => 1,  // ← correct spelling
+                                'status' => "end",  // ← correct spelling
                             ]);
 
                                 return response()->json([
                                     'status'  => true,
                                     'message' => 'Tracking Updated',
+                                   
+                                ]);
+                            } else {
+                            
+                                return response()->json([
+                                    'status'  => false,
+                                    'message' => 'Invalid slot ID',
+                                ], 200);
+                            }
+
+
+                       
+
+
+
+
+                }
+
+                // status as started
+                   public function status_started($id){
+                  
+
+
+                           
+                     
+
+                            // 2) Fetch the slot
+                            $slot = AssignedAppointment::find($id);
+
+                              if (!$slot) {
+                                return response()->json([
+                                    'status' => false,
+                                    'message' => 'Slot not found.'
+                                ], 200); // 404 Not Found
+                            }
+                            // 3) Return the response
+                            if ($slot) {    
+
+                              
+
+
+                              $slot->update([
+                                'status' => "start",  // ← correct spelling
+                            ]);
+
+                                return response()->json([
+                                    'status'  => true,
+                                    'message' => 'Session Started',
                                    
                                 ]);
                             } else {

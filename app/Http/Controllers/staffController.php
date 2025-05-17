@@ -98,7 +98,7 @@ class staffController extends Controller
                 ], 200);
             }
 
-            if ($staff->deleted_at !== null) {
+            if ($staff->deleted_at == 1) {
                 return response()->json([
                     'status' => false,
                     'message' => 'Staff Deleted'
@@ -112,7 +112,7 @@ class staffController extends Controller
         }
 
         $query = User::whereIn('role', ['Therapist', 'Counceller'])
-                              ->where('deleted_at', 0) ;
+                              ->where('deleted_at', '=',0) ;
 
                   
 
@@ -124,7 +124,7 @@ class staffController extends Controller
             $query->where('role', $request->input('role'));
         }
 
-        $getStaff = $query->get();
+        $getStaff = $query->paginate(10);
 
         return response()->json([
             'status' => true,
@@ -160,7 +160,7 @@ class staffController extends Controller
             'message' => 'Staff not found'], 200);
     }
 
-    if($staff->deleted_at!=null){
+    if($staff->deleted_at==1){
         return response()->json([
             'status'=>false,
             'message' => 'Staff Deleted'], 200);

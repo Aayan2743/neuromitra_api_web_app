@@ -30,7 +30,7 @@ Route::get('/send-notification', [NotificationController::class, 'send']);
 // staff login uplocionmg appoibntments therapy in furture place correct place
  
 
-
+ 
 
 
 
@@ -98,6 +98,7 @@ Route::group(['middleware'=>['jwt.verify', 'checkAdmin']],function($routes){
     Route::get('view-appointments/{id?}',[AppointmentController::class,'index']);
     // Route::put('assigned-staff/{id}',[AppointmentController::class,'assign_to_staff']);
     Route::post('assigned-staff',[AppointmentController::class,'assign_to_staff']);
+     Route::post('session-list/{id}',[AppointmentController::class,'slotsByAppointment']);
 
 
     // staff assigned to client availability
@@ -128,7 +129,7 @@ Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],f
 
        // create Appointment
        Route::post('create-appointment-request',[AppointmentController::class,'store']);
-       
+        Route::get('view-appointments/{id?}',[AppointmentController::class,'user_appointments']);
 
        // get_child_details
        Route::get('get-child-details/{id?}',[ChildController::class,'index']);
@@ -148,7 +149,19 @@ Route::group(['middleware'=>['jwt.verify', 'checkUser'],  'prefix' => 'users'],f
         // get all slots by app_id
         Route::get('/appointments_by_id/{app_id}', [AppointmentController::class, 'slotsByAppointment']);
 
+        // get session tracking
+        Route::get('/session-tracking/{id?}', [AppointmentController::class, 'sessiontracking']);
 
+        
+          // assesement module
+        Route::get('/list_of_answers/{id}', [assesementsController::class, 'list']); 
+        Route::post('/submit-assesement', [assesementsController::class, 'submit_assesement']); 
+
+        // get phonepay keys
+        Route::get('/get_keys', [PhonePaycontroller::class, 'get_keys']); 
+        
+
+     
 
 });
 
@@ -156,8 +169,25 @@ Route::group(['middleware'=>['jwt.verify', 'checkTherapist'],  'prefix' => 'ther
    Route::get('/staff-upcoming-appointments', [AppointmentController::class, 'staffUpcomingAppointments']);
    Route::post('/add_session_tracker/{id?}', [AppointmentController::class, 'tracker']);
 
+       // profile details
+    Route::get('view-profile_details',[ProfileController::class,'viewProfiles']);
+    Route::post('profile-update_details',[ProfileController::class,'update']);
+       Route::get('/start-session/{id?}',[AppointmentController::class, 'status_started']);
+
 });
 
+
+Route::group(['middleware'=>['jwt.verify', 'checkCounceller'],  'prefix' => 'counceller'],function($routes){
+   Route::get('/staff-upcoming-appointments', [AppointmentController::class, 'staffUpcomingAppointments']);
+   Route::post('/add_session_tracker/{id?}', [AppointmentController::class, 'tracker']);
+
+   Route::get('/start-session/{id?}',[AppointmentController::class, 'status_started']);
+       // profile details
+    Route::get('view-profile_details',[ProfileController::class,'viewProfiles']);
+    Route::post('profile-update_details',[ProfileController::class,'update']);
+
+
+});
 
 
 // test on phonepay

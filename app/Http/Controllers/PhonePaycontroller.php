@@ -5,10 +5,32 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Dipesh79\LaravelPhonePe\LaravelPhonePe;
 use Validator;
-
+use App\Models\phonepaykey;
 class PhonePaycontroller extends Controller
 {
     //
+
+
+   public function get_keys(){
+
+    try{
+         $get_details=phonepaykey::where('saas_id',env('SAAS_KEY'))->get();
+            return response()->json([
+                'status'=>true,
+                'keys'=>$get_details
+            ]);
+    }catch(\Exception $e){
+             return response()->json([
+                'status'=>false,
+                'message'=>$e->getMessage()
+            ]);
+    }
+
+   
+   } 
+
+
+
 
     public function phonePePayment(Request $request)
 {

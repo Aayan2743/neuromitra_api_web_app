@@ -84,7 +84,7 @@ class assesementsController extends Controller
         }
     }
 
-    $results = $query->get();
+    $results = $query->paginate(10);
 
     return response()->json([
         'status' => true,
@@ -326,5 +326,192 @@ class assesementsController extends Controller
 
     }
 
+
+
+    // from user side show questions
+
+      public function list(?int $id = null){
+
+
+        try{
+                  $query = assesementguideModel::query();
+
+                    // this will fire for 0, 1, 2, … but not for null
+                    if ($id !== null) {
+                        $query->where('for_whome', $id);
+                    }
+
+                    $results = $query->paginate(5)->groupBy('section_name');
+
+                    return response()->json([
+                        'status' => true,
+                        'data'   => $results,
+                    ]);
+      
+        }catch(\Exception $e){
+                return response()->json([
+                        'status' => false,
+                        'data'   => $e->getMessage()
+                    ]);  
+        }
+      
+       
+      
+      
+      
+      
+      
+      
+        // $listofQuestion = assesementguideModel::where('for_whome',0)->orderBy('section_name')
+        //           ->orderBy('id')
+        //           ->get()
+        //           ->groupBy('section_name');
+
+            
+
+        // return response()->json([
+        //     'status'=>true,
+        //     'data'=>$listofQuestion
+        // ]);
+
+      }
+
+      // save answers
+    public function submit_assesement(Request $request){
+
+        $validator = Validator::make($request->all(), [
+           
+            'data' => 'required',
+            'role' => 'required|in:0,1',
+
+
+        ],[
+           
+            'role.in'=>'Role shoule be 0 for Kids and 1 for Adults ',
+        ]);
+    
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                
+                'message' => $validator->errors()->first(),
+            ], 200);
+        }
+
+        $user_id=Auth()->user()->id;
+
+    
+
+        if($request->role==0) //  for kids calucation
+        {
+            $data = json_decode($request->data, true);
+            $scoreMap = [
+                "No" => 0,
+                "Sometimes" => 1,
+                "Yes" => 2
+            ];
+            $categoryScores = [];
+                $totalScore = 0;
+    
+                // Iterate over answers and calculate score per category
+                foreach ($data['answers'] as $category => $questions) {
+                    $categoryScores[$category] = 0;
+                    foreach ($questions as $question) {
+                        $answer = $question['answer'];
+                        if (isset($scoreMap[$answer])) {
+                            $categoryScores[$category] += $scoreMap[$answer];
+                            $totalScore += $scoreMap[$answer]; // Add to total score
+                        }
+                    }
+                }
+                // Include total score in the output
+                $categoryScores["Total Score"] = $totalScore;
+    
+                // Convert to JSON
+                $score_for_kids = json_encode($categoryScores, JSON_PRETTY_PRINT);
+
+                $saveanswers=assementguideanswer::create([
+                    'user_id'=>$user_id,
+                  
+                    'data' => $request->data,
+                    'for_whome' => $request->role,
+                    'score' => $score_for_kids
+                ]);
+        
+                if($saveanswers){
+                    return response()->json([
+                        'status'=>true,
+                        'message'=>'added',
+                        'result'=>$score_for_kids,
+                        'role'=> $request->role,
+                    ]);
+                }
+
+
+        }else{
+            // for adults
+
+            $data = json_decode($request->data, true);
+            $scoreMap = [
+                "Strongly Disagree" => 1,
+                "Disagree" => 2,
+                "Neutral" => 3,
+                "Agree" => 4,
+                "Strongly Agree" => 5
+            ];
+            $categoryScores = [];
+                $totalScore = 0;
+    
+                // Iterate over answers and calculate score per category
+                foreach ($data['answers'] as $category => $questions) {
+                    $categoryScores[$category] = 0;
+                    foreach ($questions as $question) {
+                        $answer = $question['answer'];
+                        if (isset($scoreMap[$answer])) {
+                            $categoryScores[$category] += $scoreMap[$answer];
+                            $totalScore += $scoreMap[$answer]; // Add to total score
+                        }
+                    }
+                }
+                // Include total score in the output
+                $categoryScores["Total Score"] = $totalScore;
+    
+                // Convert to JSON
+                $score_for_adults = json_encode($categoryScores, JSON_PRETTY_PRINT);
+
+               // dd($score_for_adults);
+
+                $saveanswers=assementguideanswer::create([
+                    'user_id'=>$user_id,
+                   
+                    'data' => $request->data,
+                    'for_whome' => $request->role,
+                    'score' => $score_for_adults
+                ]);
+        
+                if($saveanswers){
+                    return response()->json([
+                        'status'=>true,
+                        'message'=>'added',
+                        'result'=>$score_for_adults,
+                        'role'=> $request->role,
+                    ]);
+                }
+
+
+
+        }
+      
+
+          
+
+
+
+
+       
+       
+
+
+    }
     
 }

@@ -125,7 +125,7 @@ try {
                 }
             }
     
-            $results = $query->where('uid',auth()->user()->id)->get();
+            $results = $query->where('uid',auth()->user()->id)->paginate(5);
     
             return response()->json([
                 'status' => true,

@@ -85,42 +85,89 @@ class servicesController extends Controller
     // view therapy and service
     public function viewService(Request $request, $id=null){
            
-        try {
-            $query = service::query();
+        // try {
+        //     $query = service::query();
     
-            // Filter by ID if passed
-            if ($id) {
+        //     // Filter by ID if passed
+        //     if ($id) {
                
-                $query->find($id);
-            }
+        //         $query->find($id);
+        //     }
     
-            // If "type" is present, validate and apply it
-            if ($request->has('type')) {
-                if (in_array($request->type, ['Therapy', 'Counselling'])) {
-                    $query->where('type', $request->type);
-                } else {
+        //     // If "type" is present, validate and apply it
+        //     if ($request->has('type')) {
+        //         if (in_array($request->type, ['Therapy', 'Counselling'])) {
+        //             $query->where('type', $request->type);
+        //         } else {
                  
-                    return response()->json([
-                        'status' => true,
-                        'data' => [],
-                    ]);
-                }
-            }
+        //             return response()->json([
+        //                 'status' => true,
+        //                 'data' => [],
+        //             ]);
+        //         }
+        //     }
     
-            $results = $query->get();
+        //     $results = $query->paginate(10);
     
-            return response()->json([
-                'status' => true,
-                'data' => $results,
-            ]);
+        //     return response()->json([
+        //         'status' => true,
+        //         'data' => $results,
+        //     ]);
     
-        } catch (\Exception $e) {
+        // } catch (\Exception $e) {
+        //     return response()->json([
+        //         'status' => false,
+        //         'message' => $e->getMessage(),
+        //     ], 200);
+        // }
+          
+
+        try {
+    $query = service::query();
+
+    // 1. If ID is passed, return a single record (no pagination)
+    if ($id) {
+        $service = $query->find($id);
+
+        if (!$service) {
             return response()->json([
                 'status' => false,
-                'message' => $e->getMessage(),
+                'message' => 'Service not found',
             ], 200);
         }
-          
+
+        return response()->json([
+            'status' => true,
+            'data' => $service, // single object
+        ]);
+    }
+
+    // 2. If "type" is present, validate and apply it
+    if ($request->has('type')) {
+        if (in_array($request->type, ['Therapy', 'Counselling'])) {
+            $query->where('type', $request->type);
+        } else {
+            return response()->json([
+                'status' => true,
+                'data' => [], // empty array if invalid type
+            ]);
+        }
+    }
+
+    // 3. Return paginated result (as array)
+    $results = $query->paginate(10);
+
+    return response()->json([
+        'status' => true,
+        'data' => $results,
+    ]);
+
+} catch (\Exception $e) {
+    return response()->json([
+        'status' => false,
+        'message' => $e->getMessage(),
+    ], 200);
+}
     
     
     }

@@ -806,6 +806,7 @@ class CustomApiAuthController extends Controller
             $user->save();
 
             return response()->json([
+                'status'=>true,
                 'access_token' => $token,
                 'refresh_token' => $refreshToken,
                 'token_type' => 'bearer',

@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use App\Models\health_daily_reports;
 use Validator;
 use Storage;
 use Hash;
+use Carbon\Carbon;
 
 class ProfileController extends Controller
 {
@@ -18,10 +20,20 @@ class ProfileController extends Controller
         
         $get_profile_details=User::find($id);
 
+           // Get today's date
+         $today = Carbon::today();
+
+    // Fetch today's health feedback
+         $healthFeedback = health_daily_reports::where('uid', $id)
+                        ->whereDate('dateoffeedback', $today)
+                        ->exists();
+
+
         if($get_profile_details){
             return response()->json([
                 'status'=>true,
-                'message'=>$get_profile_details
+                'message'=>$get_profile_details,
+                'health_feedback' =>  ['status' => $healthFeedback]
             ]);
         }
 
@@ -43,8 +55,8 @@ class ProfileController extends Controller
          'name'=>'required|string',
          'email' => 'required|email|unique:users,email,' . $id, 
          'contact'=>'required|digits:10|unique:users,contact,'.$id,
-         'profile_pic' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-         'password' => 'nullable|min:6',
+         'profile_pic' => 'sometimes|nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+         'password' => 'sometimes|nullable|min:6',
          ]);
  
          if($validator->fails()){

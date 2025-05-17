@@ -24,10 +24,15 @@ class appiontment extends Model
     return $this->hasMany(AssignedAppointment::class, 'app_id');
 }
 
-       public function staff()
-{
+//        public function staff()
+// {
 
-    return $this->hasOne(user::class, 'staff_id');
+//     return $this->hasOne(user::class, 'staff_id');
+// }
+
+public function staff()
+{
+    return $this->belongsTo(User::class, 'staff_id');
 }
 
  public function user()

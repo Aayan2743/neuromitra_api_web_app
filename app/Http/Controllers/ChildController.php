@@ -24,7 +24,7 @@ class ChildController extends Controller
             // Filter by parent_id (auth user)
             $query->where('parent_id', auth()->user()->id);
         
-            $results = $query->get();
+            $results = $query->paginate(10);
         
             return response()->json([
                 'status' => true,
